@@ -42,7 +42,7 @@ func TestEncode(t *testing.T) {
 			Data: "019493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e337b62cfff6403a06a3acbc34f8c46003c69fe79a3628cefa9c47251",
 			Want: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
 		},
-		/*"type-01": {
+		"type-01": {
 			HRP:  "addr",
 			Data: "11c37b1b5dc0669f1d3c61a6fddb2e8fde96be87b881c60bce8e8d542f337b62cfff6403a06a3acbc34f8c46003c69fe79a3628cefa9c47251",
 			Want: "addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh",
@@ -86,7 +86,7 @@ func TestEncode(t *testing.T) {
 			HRP:  "stake",
 			Data: "f1c37b1b5dc0669f1d3c61a6fddb2e8fde96be87b881c60bce8e8d542f",
 			Want: "stake178phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcccycj5",
-		},*/
+		},
 	}
 
 	for label, tc := range testCases {

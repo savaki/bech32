@@ -2,9 +2,7 @@ package bech32
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 
 	"github.com/icza/bitio"
 )
@@ -20,39 +18,57 @@ func polymodStep(v byte, chk int) int {
 	return chk
 }
 
+func prefixCheck(prefix string) (int, error) {
+	chk := 1
+	for _, c := range []byte(prefix) {
+		if c < 33 || c > 126 {
+			return 0, fmt.Errorf("invalid prefix: %v character out of range", c)
+		}
+		chk = polymodStep(c>>5, chk)
+	}
+	chk = polymodStep(0, chk)
+	for _, c := range []byte(prefix) {
+		chk = polymodStep(c&0x1f, chk)
+	}
+	return chk, nil
+}
+
 // Encode a human readable part (hrp) and bytes as a bech32 string
 func Encode(hrp string, data []byte) (encoded string, err error) {
 	if len(hrp) < 1 {
 		return "", ErrInvalidLength
 	}
 
-	hrpBytes := []byte(hrp)
-	chk := 1
+	chk, err := prefixCheck(hrp)
+	if err != nil {
+		return "", err
+	}
 
-	encoded = fmt.Sprintf("%s%s", hrp, sep)
-	for _, v := range hrpBytes {
-		chk = polymodStep(v>>5, chk)
-	}
-	chk = polymodStep(0, chk)
-	for _, v := range hrpBytes {
-		chk = polymodStep(v&0x1f, chk)
-	}
+	encoded = hrp + sep
 
 	r := bitio.NewReader(bytes.NewBuffer(data))
-	for {
-		b, err := r.ReadBits(5)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				fmt.Printf("Aborting %v\n", b)
-				break
+	remainingBits := len(data) * 8
+	for remainingBits > 0 {
+		var b uint64
+		if remainingBits > 5 {
+			b, err = r.ReadBits(5)
+			if err != nil {
+				return "", fmt.Errorf("error reading data: %w", err)
 			}
-			return "", ErrInvalidCharacter
+			remainingBits -= 5
+		} else {
+			// Consume the remaining bits, and align them as if it were a u5
+			// ending in 0s
+			b, err = r.ReadBits(uint8(remainingBits))
+			b = b << (5 - remainingBits)
+			if err != nil {
+				return "", fmt.Errorf("error reading final bits: %w", err)
+			}
+			remainingBits = 0
 		}
 		chk = polymodStep(byte(b), chk)
-		fmt.Printf("%v: %v (%v)\n", b, charset[b], string(charset[b]))
 		encoded += string(charset[b])
 	}
-	fmt.Printf("%v\n", encoded)
 
 	for i := 0; i < 6; i++ {
 		chk = polymodStep(0, chk)
@@ -63,10 +79,8 @@ func Encode(hrp string, data []byte) (encoded string, err error) {
 	checksum := []byte{}
 	for p := 0; p < 6; p++ {
 		c := (plm >> (5 * (5 - p))) & 0x1f
-		fmt.Printf("%v: %v (%v)\n", byte(c), charset[c], string(charset[c]))
 		checksum = append(checksum, charset[byte(c)])
 	}
 	encoded += string(checksum)
-	fmt.Printf("%s", encoded)
 	return encoded, nil
 }
